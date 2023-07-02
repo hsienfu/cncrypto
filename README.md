@@ -1,4 +1,4 @@
 ```
-  $ sudo apt install -y libboost-all-dev libssl-dev
+  $ sudo apt install -y cmake libboost-all-dev libssl-dev libsodium-dev
 ```
 
