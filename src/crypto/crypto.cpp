@@ -232,12 +232,54 @@ namespace crypto {
     return true;
   }
 
+  bool crypto_ops::derive_public_key2(const key_derivation &derivation, size_t output_index,
+    const public_key &base, const public_key &regulator, public_key &derived_key) {
+    ec_scalar scalar;
+    ge_p3 point1;
+    ge_p3 point2;
+    ge_cached point3;
+    ge_p1p1 point4;
+    ge_p2 point5;
+    ge_p3 point6;
+    ge_p3 point7;
+    ge_cached point8;
+    ge_p1p1 point9;
+    if (ge_frombytes_vartime(&point1, &base) != 0) {
+      return false;
+    }
+    if (ge_frombytes_vartime(&point6, &regulator) != 0) {
+      return false;
+    }
+    derivation_to_scalar(derivation, output_index, scalar);
+    ge_scalarmult_base(&point2, &scalar);
+    ge_p3_to_cached(&point3, &point2);
+    ge_add(&point4, &point1, &point3);
+
+    ge_p1p1_to_p3(&point7, &point4);
+    ge_p3_to_cached(&point8, &point7);
+    ge_add(&point9, &point6, &point8);
+
+    ge_p1p1_to_p2(&point5, &point9);
+    ge_tobytes(&derived_key, &point5);
+    return true;
+  }
+
   void crypto_ops::derive_secret_key(const key_derivation &derivation, size_t output_index,
     const secret_key &base, secret_key &derived_key) {
     ec_scalar scalar;
     assert(sc_check(&base) == 0);
     derivation_to_scalar(derivation, output_index, scalar);
     sc_add(&unwrap(derived_key), &unwrap(base), &scalar);
+  }
+
+  void crypto_ops::derive_secret_key2(const key_derivation &derivation, size_t output_index,
+    const secret_key &r2, const secret_key &base, secret_key &derived_key) {
+    ec_scalar scalar;
+    secret_key r3b2;
+    assert(sc_check(&base) == 0);
+    derivation_to_scalar(derivation, output_index, scalar);
+    sc_add(&unwrap(r3b2), &unwrap(base), &scalar);
+    sc_add(&unwrap(derived_key), &unwrap(r2), &unwrap(r3b2));
   }
 
   bool crypto_ops::derive_subaddress_public_key(const public_key &out_key, const key_derivation &derivation, std::size_t output_index, public_key &derived_key) {
@@ -255,6 +297,37 @@ namespace crypto {
     ge_p3_to_cached(&point3, &point2);
     ge_sub(&point4, &point1, &point3);
     ge_p1p1_to_p2(&point5, &point4);
+    ge_tobytes(&derived_key, &point5);
+    return true;
+  }
+
+  bool crypto_ops::derive_subaddress_public_key2(const public_key &out_key, const key_derivation &derivation, const public_key &R, std::size_t output_index, public_key &derived_key) {
+    ec_scalar scalar;
+    ge_p3 point1;
+    ge_p3 point2;
+    ge_cached point3;
+    ge_p1p1 point4;
+    ge_p2 point5;
+    ge_p3 point6;
+    ge_p3 point7;
+    ge_cached point8;
+    ge_p1p1 point9;
+    if (ge_frombytes_vartime(&point1, &out_key) != 0) {
+      return false;
+    }
+    if (ge_frombytes_vartime(&point6, &R) != 0) {
+      return false;
+    }
+    derivation_to_scalar(derivation, output_index, scalar);
+    ge_scalarmult_base(&point2, &scalar);
+    ge_p3_to_cached(&point3, &point2);
+    ge_sub(&point4, &point1, &point3);
+
+    ge_p1p1_to_p3(&point7, &point4);
+    ge_p3_to_cached(&point8, &point6);
+    ge_sub(&point9, &point7, &point8);
+
+    ge_p1p1_to_p2(&point5, &point9);
     ge_tobytes(&derived_key, &point5);
     return true;
   }

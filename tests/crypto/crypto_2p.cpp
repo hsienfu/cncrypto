@@ -35,16 +35,16 @@ int main(int argc, char *argv[]) {
   setup_random();
 
   // Alice Keypairs
-  public_key alice_pk_A, alice_pk_B;
-  secret_key alice_sk_A, alice_sk_B;
-  generate_keys(alice_pk_A, alice_sk_A);
-  generate_keys(alice_pk_B, alice_sk_B);
+  public_key A1, B1;
+  secret_key a1, b1;
+  generate_keys(A1, a1);
+  generate_keys(B1, b1);
 
   // Bob Keypairs
-  public_key bob_pk_A, bob_pk_B;
-  secret_key bob_sk_A, bob_sk_B;
-  generate_keys(bob_pk_A, bob_sk_A);
-  generate_keys(bob_pk_B, bob_sk_B);
+  public_key A2, B2;
+  secret_key a2, b2;
+  generate_keys(A2, a2);
+  generate_keys(B2, b2);
 
   // `Alice`选择随机数`r`, R = r * G
   secret_key r;
@@ -53,22 +53,25 @@ int main(int argc, char *argv[]) {
   secret_key_to_public_key(r, R);
 
   // `Alice`计算`Bob`一次性公钥
-  public_key P1;
+  public_key expected;
   key_derivation d1;
-  generate_key_derivation(bob_pk_A, r, d1);
-  derive_public_key(d1, output_index, bob_pk_B, P1); 
+  generate_key_derivation(A2, r, d1);
+  derive_public_key(d1, output_index, B2, expected); 
 
-  cout << "P1 = " << P1 << endl;
-
-  // `Bob`计算自己的一次性公钥
-  public_key P2;
-  secret_key S2;
+  // `Bob`计算`Bob`一次性公钥
+  public_key actual;
+  secret_key sk_1time;
   key_derivation d2;
-  generate_key_derivation(R, bob_sk_A, d2);
-  derive_secret_key(d2, output_index, bob_sk_B, S2); 
-  secret_key_to_public_key(S2, P2);
-  cout << "S2 = " << S2 << endl;
-  cout << "P2 = " << P2 << endl;
+  generate_key_derivation(R, a2, d2);
+  derive_secret_key(d2, output_index, b2, sk_1time); 
+  secret_key_to_public_key(sk_1time, actual);
+
+  if (expected != actual) {
+    cerr << "Wrong result: " << endl;
+    cerr << "    expected: " << expected << endl;
+    cerr << "      actual: " << actual << endl;
+    error = true;
+  }
 
   return error ? 1 : 0;
   CATCH_ENTRY_L0("crypto-2p", 1);
