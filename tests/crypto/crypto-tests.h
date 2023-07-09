@@ -48,4 +48,9 @@ void hash_to_point(const crypto::hash &h, crypto::ec_point &res);
 void hash_to_ec(const crypto::public_key &key, crypto::ec_point &res);
 bool check_ge_p3_identity_failure(const crypto::public_key &point);
 bool check_ge_p3_identity_success(const crypto::public_key &point);
+
+// Returns seconds elapsed since the first call to this function.
+// Returns 0 the first time.
+double get_time(void);
+
 #endif

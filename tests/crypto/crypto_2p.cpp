@@ -29,7 +29,15 @@ bool operator !=(const key_derivation &a, const key_derivation &b) {
 DISABLE_GCC_WARNING(maybe-uninitialized)
 
 int main(int argc, char *argv[]) {
+  if (argc != 2) {
+    cerr << "invalid arguments" << endl;
+    return 1;
+  }
+  size_t n = atoi(argv[1]);
+  size_t i = 0;
+
   TRY_ENTRY();
+  double t0, t1, t2;
   size_t output_index;
   bool error = false;
   setup_random();
@@ -46,25 +54,42 @@ int main(int argc, char *argv[]) {
   generate_keys(A2, a2);
   generate_keys(B2, b2);
 
-  // `Alice`选择随机数`r`, R = r * G
+  // 计时开始
+  t0 = get_time();
+
   secret_key r;
   public_key R;
-  random_scalar(r);
-  secret_key_to_public_key(r, R);
-
-  // `Alice`计算`Bob`一次性公钥
   public_key expected;
   key_derivation d1;
-  generate_key_derivation(A2, r, d1);
-  derive_public_key(d1, output_index, B2, expected); 
+
+  for (; i < n; i++) {
+    // `Alice`选择随机数`r`, R = r * G
+    random_scalar(r);
+    secret_key_to_public_key(r, R);
+
+    // `Alice`计算`Bob`一次性公钥
+    generate_key_derivation(A2, r, d1);
+    derive_public_key(d1, output_index, B2, expected); 
+  }
+
+  // 计时结束
+  t1 = get_time();
+  cout << "Alice derive PKonetime elapsed: " << (t1 - t0) << endl;
 
   // `Bob`计算`Bob`一次性公钥
   public_key actual;
   secret_key sk_1time;
   key_derivation d2;
-  generate_key_derivation(R, a2, d2);
-  derive_secret_key(d2, output_index, b2, sk_1time); 
-  secret_key_to_public_key(sk_1time, actual);
+
+  for (i = 0; i < n; i++) {
+    generate_key_derivation(R, a2, d2);
+    derive_secret_key(d2, output_index, b2, sk_1time); 
+    secret_key_to_public_key(sk_1time, actual);
+  }
+
+  // 计时结束
+  t2 = get_time();
+  cout << "  Bob derive PKonetime elapsed: " << (t2 - t1) << endl;
 
   if (expected != actual) {
     cerr << "Wrong result: " << endl;

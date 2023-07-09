@@ -29,7 +29,15 @@ bool operator !=(const key_derivation &a, const key_derivation &b) {
 DISABLE_GCC_WARNING(maybe-uninitialized)
 
 int main(int argc, char *argv[]) {
+  if (argc != 2) {
+    cerr << "invalid arguments" << endl;
+    return 1;
+  }
+  size_t n = atoi(argv[1]);
+  size_t i = 0;
+
   TRY_ENTRY();
+  double t0, t1, t2, t3;
   size_t output_index;
   bool error = false;
   setup_random();
@@ -52,55 +60,76 @@ int main(int argc, char *argv[]) {
   generate_keys(A3, a3);
   generate_keys(B3, b3);
 
+  // 计时开始
+  t0 = get_time();
+
   // `Alice`选择随机数`r`, R = r * G
   secret_key r1, r2;
   public_key R;
   char data[sizeof(secret_key) + sizeof(key_derivation)];
   key_derivation a1A2, r2A3;
-
-  // r1
-  random_scalar(r1);
-
-  // r2
-  generate_key_derivation(A2, a1, a1A2);
-  memcpy(data, &r1, sizeof(secret_key));
-  memcpy(data + sizeof(secret_key), &a1A2, sizeof(key_derivation));
-  crypto::hash_to_scalar(data, sizeof(data), r2);
-
-  // R
-  secret_key_to_public_key(r2, R);
-
-  // `Alice`计算`Bob`一次性公钥
-  // pk = r3 * G + R + B2
   public_key expected;
-  generate_key_derivation(A3, r2, r2A3);
-  derive_public_key2(r2A3, output_index, R, B2, expected);
+
+  for (; i < n; i++) {
+    // r1
+    random_scalar(r1);
+
+    // r2
+    generate_key_derivation(A2, a1, a1A2);
+    memcpy(data, &r1, sizeof(secret_key));
+    memcpy(data + sizeof(secret_key), &a1A2, sizeof(key_derivation));
+    crypto::hash_to_scalar(data, sizeof(data), r2);
+
+    // R
+    secret_key_to_public_key(r2, R);
+
+    // `Alice`计算`Bob`一次性公钥
+    // pk = r3 * G + R + B2
+    generate_key_derivation(A3, r2, r2A3);
+    derive_public_key2(r2A3, output_index, R, B2, expected);
+  }
+
+  // 计时
+  t1 = get_time();
+  cout << "    Alice derive PKonetime elapsed: " << (t1 - t0) << endl;
 
   // `Bob`计算`Bob`一次性公钥
   public_key actual1;
   secret_key sk_1time;
   key_derivation a2A1;
 
-  // r2'
-  generate_key_derivation(A1, a2, a2A1);
-  memcpy(data, &r1, sizeof(secret_key));
-  memcpy(data + sizeof(secret_key), &a2A1, sizeof(key_derivation));
-  crypto::hash_to_scalar(data, sizeof(data), r2);
+  for (i = 0; i < n; i++) {
+    // r2'
+    generate_key_derivation(A1, a2, a2A1);
+    memcpy(data, &r1, sizeof(secret_key));
+    memcpy(data + sizeof(secret_key), &a2A1, sizeof(key_derivation));
+    crypto::hash_to_scalar(data, sizeof(data), r2);
 
-  // r3 = r2 * A3
-  generate_key_derivation(A3, r2, r2A3);
-  derive_secret_key2(r2A3, output_index, r2, b2, sk_1time);
+    // r3 = r2 * A3
+    generate_key_derivation(A3, r2, r2A3);
+    derive_secret_key2(r2A3, output_index, r2, b2, sk_1time);
 
-  // pk1time = (r3 + r2' + b2) * G
-  secret_key_to_public_key(sk_1time, actual1);
+    // pk1time = (r3 + r2' + b2) * G
+    secret_key_to_public_key(sk_1time, actual1);
+  }
+
+  // 计时
+  t2 = get_time();
+  cout << "      Bob derive PKonetime elapsed: " << (t2 - t1) << endl;
 
   // `Regulator`计算`Bob`长期公钥
   public_key actual2;
   key_derivation a3R;
 
-  // r3 = a3 * R
-  generate_key_derivation(R, a3, a3R);
-  derive_subaddress_public_key2(expected, a3R, R, output_index, actual2);
+  for (i = 0; i < n; i++) {
+    // r3 = a3 * R
+    generate_key_derivation(R, a3, a3R);
+    derive_subaddress_public_key2(expected, a3R, R, output_index, actual2);
+  }
+
+  // 计时
+  t3 = get_time();
+  cout << "Regulator derive PKonetime elapsed: " << (t3 - t2) << endl;
 
   if (expected != actual1) {
     cerr << "Wrong PK onetime result: " << endl;

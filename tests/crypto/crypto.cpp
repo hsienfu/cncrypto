@@ -28,8 +28,10 @@
 // 
 // Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
-#include "crypto/crypto.cpp"
+#include <sys/time.h>
+#include <time.h>
 
+#include "crypto/crypto.cpp"
 #include "crypto-tests.h"
 
 static void get_ge_p3_for_identity_test(const crypto::public_key &point, crypto::ge_p3 &result_out_p3)
@@ -100,4 +102,23 @@ bool check_ge_p3_identity_success(const crypto::public_key &point)
   get_ge_p3_for_identity_test(point, ident_p3);
 
   return crypto::ge_p3_is_point_at_infinity_vartime(&ident_p3) == 1;
+}
+
+double get_time(void) {
+  static struct timeval last_tv, tv;
+  static int first = 1;
+  static double res = 0;
+
+  if (first) {
+    gettimeofday(&last_tv, NULL);
+    first = 0;
+    return 0;
+  } else {
+    gettimeofday(&tv, NULL);
+    res += tv.tv_sec - last_tv.tv_sec;
+    res += (tv.tv_usec - last_tv.tv_usec) / 1000000.0;
+    last_tv = tv;
+
+    return res;
+  }
 }
